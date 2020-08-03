@@ -1,12 +1,20 @@
 classdef MultivariableRecursiveLS < handle
+    % 
+    % Algorithm: ADAPTIVE FILTERING PREDICTION AND CONTROL, pp. 96--97, 1987
+            
     properties
-        ForgettingFactor (1, 1) double
+        ForgettingFactor (1, 1) double {mustBePositive} = 1
         
     end
     properties(Access=private)
         Covariance
         Parameter
     end
+    properties (Access=private)
+        InputSize (1, 1) double {mustBePositive} = 1
+        OutputSize (1, 1) double {mustBePositive} = 1
+    end
+    
     methods
         function obj = MultivariableRecursiveLS(inputSize, outputSize, options)
             arguments
@@ -30,29 +38,70 @@ classdef MultivariableRecursiveLS < handle
             obj.Parameter = options.initialParameter;
             obj.Covariance = options.initialCovariance;
             obj.ForgettingFactor = options.ForgettingFactor;
+            
+            obj.InputSize = inputSize;
+            obj.OutputSize = outputSize;
         end
     end
     methods
         function [thetaHat, yHat] = step(obj, y, u)
-            % Varidation
-            % TODO: Imprement
-            
             % 
-            P = obj.Covariance;
-            theta = obj.Parameter;
-            lambda = obj.ForgettingFactor;
+            % Inputs
+            %   y [m 1] output vector at time i, y[i].
+            %   u [p 1] input vector at time i, u[i].
+            %
+            % Outputs
+            %  thetaHat [p m] parameter vetcor at time i, theta[i].
+            %  yHat [m 1] predict from u[i] and theta[i-1].
+            
+            % Validation
+            validateattributes(y, {'double'}, {'size', [obj.OutputSize, 1]}, 'y');
+            validateattributes(u, {'double'}, {'size', [obj.InputSize, 1]}, 'u');
             
             % Calucrate estimate error
             % e[i] = y[i] - u'[i]theta[i-1]
-            yHat =  theta' * u;
+            yHat =  obj.predict(u);
             err = y - yHat;
             
             % Update Parameter
             % 
-            thetaHat = theta + (P * u) / (lambda + u'*P*u) * err';
-            obj.Covariance = 1/lambda * (P - (P*u*u'*P)/(lambda + u'*P*u));
+            updateParameters(obj, err, u);
+            thetaHat = obj.Parameter;        
+        end
+        
+        function yHat = predict(obj, u)
+            % Validate arguments
+            validateattributes(u, {'double'}, {'size', [obj.InputSize, 1]}, 'u');
             
-            obj.Parameter = thetaHat;
+            yHat = obj.Parameter' * u;
+        end
+        
+        function updateParameters(obj, err, u)
+            % Validate arguments
+            validateattributes(err, {'double'}, {'size', [obj.OutputSize, 1]}, 'err');
+            validateattributes(u, {'double'}, {'size', [obj.InputSize, 1]}, 'u');
+            
+            P = obj.Covariance;
+            theta = obj.Parameter;
+            lambda = obj.ForgettingFactor;
+            
+            obj.Parameter = theta + (P * u) / (lambda + u'*P*u) * err';
+            obj.Covariance = 1/lambda * (P - (P*u*u'*P)/(lambda + u'*P*u));            
+        end
+    end
+    
+    % get/set metods
+    methods
+        function setForgettingFactor(obj, value)
+            arguments
+                obj
+                value (1, 1) double {mustBePositive}
+            end
+            obj.ForgettingFactor = value;
+        end
+        
+        function theta = getParameter(obj)
+            theta = obj.Parameter;
         end
     end
     
