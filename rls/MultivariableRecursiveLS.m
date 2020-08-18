@@ -6,7 +6,7 @@ classdef MultivariableRecursiveLS < handle
         ForgettingFactor (1, 1) double {mustBePositive} = 1
         
     end
-    properties(Access=private)
+    properties(Access=protected)
         Covariance
         Parameter
     end
