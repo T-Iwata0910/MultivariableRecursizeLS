@@ -10,7 +10,7 @@ classdef MultivariableRecursiveLS < handle
         Covariance
         Parameter
     end
-    properties (Access=private)
+    properties (Access=protected)
         InputSize (1, 1) double {mustBePositive} = 1
         OutputSize (1, 1) double {mustBePositive} = 1
     end
